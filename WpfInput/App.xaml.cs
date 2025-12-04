@@ -1,14 +1,18 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
+﻿using System.Windows;
+using KeyboardDemo.PrismUnity.Services;
+using Prism.Ioc;
+using Prism.Unity;
+using WpfInput;
 
-namespace WpfInput
+namespace KeyboardDemo.PrismUnity;
+
+public partial class App : PrismApplication
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App : Application
-    {
-    }
+    protected override Window CreateShell()
+        => Container.Resolve<MainWindow>();
 
+    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    {
+        containerRegistry.RegisterSingleton<IKeyboardInputService, KeyboardInputService>();
+    }
 }
