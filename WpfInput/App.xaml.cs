@@ -2,7 +2,6 @@
 using KeyboardDemo.PrismUnity.Services;
 using Prism.Ioc;
 using Prism.Unity;
-using WpfInput;
 
 namespace KeyboardDemo.PrismUnity;
 
