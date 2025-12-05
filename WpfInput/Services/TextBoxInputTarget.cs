@@ -67,7 +67,6 @@ public sealed class TextBoxInputTarget : ITextInputTarget
 
         if (_appendOnly)
         {
-            // в append-only Delete трактуем как Backspace
             Backspace();
             return;
         }

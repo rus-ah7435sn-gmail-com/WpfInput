@@ -2,16 +2,26 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             Height="260" Width="520">
+             Height="320" Width="400">
 
+	<UserControl.Resources>
+		<Style x:Key="KeyBtn" TargetType="Button">
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="Margin" Value="4"/>
+			<Setter Property="MinHeight" Value="36"/>
+			<Setter Property="MinWidth" Value="26"/>
+			<Setter Property="FontSize" Value="20"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Background" Value="LightYellow"/>
+		</Style>
+	</UserControl.Resources>
+	
     <Border CornerRadius="10" Background="#FF1E1E1E" Padding="10">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-
-            <TextBlock Text="Экранная клавиатура" Foreground="White" Margin="0,0,0,8"/>
 
             <!-- Numeric pad -->
             <Grid Grid.Row="1">
@@ -32,15 +42,17 @@
                     <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Row 0 -->
+				<Button Grid.Row="0" Grid.Column="3" Grid.RowSpan="2" Content="OK" Style="{StaticResource KeyBtn}"
+						Background="Green" Foreground="White"
+						Command="{Binding PressKeyCommand}" CommandParameter="ENTER"/>
+				
+				<!-- Row 0 -->
                 <Button Grid.Row="0" Grid.Column="0" Content="7" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="7"/>
                 <Button Grid.Row="0" Grid.Column="1" Content="8" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="8"/>
                 <Button Grid.Row="0" Grid.Column="2" Content="9" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="9"/>
-                <Button Grid.Row="0" Grid.Column="3" Content="⌫" Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter="BACK"/>
 
                 <!-- Row 1 -->
                 <Button Grid.Row="1" Grid.Column="0" Content="4" Style="{StaticResource KeyBtn}"
@@ -49,31 +61,28 @@
                         Command="{Binding PressKeyCommand}" CommandParameter="5"/>
                 <Button Grid.Row="1" Grid.Column="2" Content="6" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="6"/>
-                <Button Grid.Row="1" Grid.Column="3" Content="Clear" Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter="CLEAR"/>
 
-                <!-- Row 2 -->
+				<!-- Row 2 -->
                 <Button Grid.Row="2" Grid.Column="0" Content="1" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="1"/>
                 <Button Grid.Row="2" Grid.Column="1" Content="2" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="2"/>
                 <Button Grid.Row="2" Grid.Column="2" Content="3" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="3"/>
-                <Button Grid.Row="2" Grid.Column="3" Content="Paste" Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter="PASTE"/>
+				<Button Grid.Row="2" Grid.Column="3" Content="Esc" Style="{StaticResource KeyBtn}"
+						Background="LightGray"
+						Command="{Binding PressKeyCommand}" CommandParameter="ESC"/>
 
-                <!-- Row 3 -->
+				<!-- Row 3 -->
                 <Button Grid.Row="3" Grid.Column="0" Content="0" Style="{StaticResource KeyBtn}"
                         Command="{Binding PressKeyCommand}" CommandParameter="0"/>
-                <Button Grid.Row="3" Grid.Column="1" Content="," Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter=","/>
-                <Button Grid.Row="3" Grid.Column="2" Content="." Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter="."/>
-                <Button Grid.Row="3" Grid.Column="3" Content="-" Style="{StaticResource KeyBtn}"
-                        Command="{Binding PressKeyCommand}" CommandParameter="-"/>
-            </Grid>
+				<Button Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Content="00" Style="{StaticResource KeyBtn}"
+						Command="{Binding PressKeyCommand}" CommandParameter="00"/>
+				<Button Grid.Row="3" Grid.Column="3" Content="⌫" Style="{StaticResource KeyBtn}"
+						Background="Red" Foreground="Black"
+                        Command="{Binding PressKeyCommand}" CommandParameter="BACK"/>
+			</Grid>
 
-            <!-- Full keyboard (минимальная) -->
             <Grid Grid.Row="1">
                 <Grid.Style>
                     <Style TargetType="Grid">

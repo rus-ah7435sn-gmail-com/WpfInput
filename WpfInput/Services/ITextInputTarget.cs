@@ -6,5 +6,5 @@ public interface ITextInputTarget
     void Backspace();
     void Delete();
     void Clear();
-    void SetCaretToEnd(); // для append-only удобно
+    void SetCaretToEnd();
 }

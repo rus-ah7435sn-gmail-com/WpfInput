@@ -12,6 +12,15 @@ public sealed class KeyboardInputService : IKeyboardInputService
 
     public bool IsNumericOnly { get; set; } = true;
 
+    public event EventHandler? EnterRequested;
+    public void RequestEnter()
+        => EnterRequested?.Invoke(this, EventArgs.Empty);
+
+    public event EventHandler? CloseKeyboardRequested;
+    public void RequestCloseKeyboard()
+        => CloseKeyboardRequested?.Invoke(this, EventArgs.Empty);
+
+
     public void AttachTargets(ITextInputTarget t1, ITextInputTarget t2, ITextInputTarget t3)
     {
         _t1 = t1;
@@ -50,13 +59,11 @@ public sealed class KeyboardInputService : IKeyboardInputService
         ActiveTarget.Text1 => _t1,
         ActiveTarget.Text2 => _t2,
         ActiveTarget.Text3 => _t3,
-        _ => _t3 // fallback: мы хотим, чтобы “не туда” всё равно шло в Text3
+        _ => _t3
     };
 
     private static string FilterNumeric(string text)
     {
-        // “всё, что связано с цифровым вводом”
-        // Разрешаем: цифры, + -, пробел, десятичные . , и локальный decimal separator.
         var dec = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
         var result = new char[text.Length];
         var n = 0;

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -15,33 +16,72 @@ public partial class KeyboardDemoView : UserControl
     private ITextInputTarget? _t2;
     private ITextInputTarget? _t3;
 
+    private void FocusSink()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            InputSink.Focus();
+            Keyboard.Focus(InputSink);
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    public KeyboardDemoView()
+    : this(ResolveKeyboardService())
+    {
+    }
+
     public KeyboardDemoView(IKeyboardInputService keyboard)
     {
         InitializeComponent();
 
         _keyboard = keyboard;
 
+        _keyboard.EnterRequested += (_, __) =>
+        {
+            if (IsFocusInText1OrText2(out var _))
+            {
+                Keyboard.ClearFocus();
+                HideKeyboard();
+
+                _keyboard.SetActiveTarget(ActiveTarget.Text3);
+                FocusSink();
+            }
+        };
+
+        _keyboard.CloseKeyboardRequested += (_, __) =>
+        {
+            Keyboard.ClearFocus();
+            HideKeyboard();
+            _keyboard.SetActiveTarget(ActiveTarget.Text3);
+        };
+
         Loaded += OnLoaded;
 
-        // Важно: ловим события даже если они “Handled” где-то ниже
         AddHandler(PreviewTextInputEvent, new TextCompositionEventHandler(OnPreviewTextInput), true);
         AddHandler(PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown), true);
         AddHandler(Keyboard.GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnGotKeyboardFocus), true);
     }
 
+    private static IKeyboardInputService ResolveKeyboardService()
+    {
+        if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
+            return new KeyboardInputService();
+
+        return ContainerLocator.Container.Resolve<IKeyboardInputService>();
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Связываем сервис с реальными целями ввода
         _t1 = new TextBoxInputTarget(Text1Box, appendOnly: false);
         _t2 = new TextBoxInputTarget(Text2Box, appendOnly: false);
         _t3 = new TextBoxInputTarget(Text3Box, appendOnly: true);
 
         _keyboard.AttachTargets(_t1, _t2, _t3);
+        _keyboard.SetActiveTarget(ActiveTarget.Text3);
+        FocusSink();
 
-        // Placement callback для Popup
         KeyboardPopup.CustomPopupPlacementCallback = PlaceKeyboardPopup;
 
-        // Реагируем на смену режима (чекбокс)
         if (DataContext is KeyboardDemoViewModel vm)
         {
             _keyboard.IsNumericOnly = vm.IsNumericOnly;
@@ -63,13 +103,13 @@ public partial class KeyboardDemoView : UserControl
         else
         {
             HideKeyboard();
-            _keyboard.SetActiveTarget(ActiveTarget.Text3); // fallback всегда Text3
+            _keyboard.SetActiveTarget(ActiveTarget.Text3);
+            FocusSink();
         }
     }
 
     private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        // Сканер как HID-клава тоже сюда приходит (обычно пачкой символов)
         if (IsFocusInText1OrText2(out var tb))
         {
             _keyboard.SetActiveTarget(tb == Text1Box ? ActiveTarget.Text1 : ActiveTarget.Text2);
@@ -78,7 +118,6 @@ public partial class KeyboardDemoView : UserControl
             return;
         }
 
-        // Фокус не в Text1/2 -> всё уходит в Text3 (в конец)
         _keyboard.SetActiveTarget(ActiveTarget.Text3);
         _keyboard.SendText(e.Text);
         e.Handled = true;
@@ -86,7 +125,6 @@ public partial class KeyboardDemoView : UserControl
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // Ctrl+V / Paste
         if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && e.Key == Key.V)
         {
             if (IsFocusInText1OrText2(out var tb))
@@ -99,7 +137,6 @@ public partial class KeyboardDemoView : UserControl
             return;
         }
 
-        // Редактирование
         if (e.Key == Key.Back)
         {
             RouteTargetByFocus();
@@ -118,17 +155,15 @@ public partial class KeyboardDemoView : UserControl
 
         if (e.Key == Key.Escape)
         {
-            // По умолчанию: очищаем активную цель (Text1/2 или Text3)
             RouteTargetByFocus();
             _keyboard.Clear();
+            HideKeyboard();
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.Enter || e.Key == Key.Tab)
         {
-            // Сканер часто шлёт Enter/Tab в конце. Мы НЕ даём этому менять фокус.
-            // В Text1/2 — просто снимаем фокус (клава исчезнет).
             if (IsFocusInText1OrText2(out _))
             {
                 Keyboard.ClearFocus();
@@ -138,8 +173,6 @@ public partial class KeyboardDemoView : UserControl
             e.Handled = true;
             return;
         }
-
-        // Остальные клавиши не трогаем, чтобы навигация/горячие клавиши окна работали.
     }
 
     private void RouteTargetByFocus()
@@ -166,7 +199,6 @@ public partial class KeyboardDemoView : UserControl
         if (!KeyboardPopup.IsOpen)
             KeyboardPopup.IsOpen = true;
 
-        // Перерисовать/пересчитать позицию (на случай DPI/resize)
         KeyboardPopup.HorizontalOffset += 0.1;
         KeyboardPopup.HorizontalOffset -= 0.1;
     }
@@ -175,11 +207,12 @@ public partial class KeyboardDemoView : UserControl
     {
         if (KeyboardPopup.IsOpen)
             KeyboardPopup.IsOpen = false;
+        _keyboard.SetActiveTarget(ActiveTarget.Text3);
+        FocusSink();
     }
 
     private CustomPopupPlacement[] PlaceKeyboardPopup(Size popupSize, Size targetSize, Point offset)
     {
-        // PlacementTarget в пикселях экрана
         var target = KeyboardPopup.PlacementTarget as FrameworkElement;
         if (target == null)
             return new[] { new CustomPopupPlacement(new Point(0, targetSize.Height), PopupPrimaryAxis.Horizontal) };
@@ -193,7 +226,6 @@ public partial class KeyboardDemoView : UserControl
         var spaceAbove = (topLeft.Y) - (work.Top);
         var fitsAbove = spaceAbove >= popupSize.Height;
 
-        // Снизу если есть место, иначе сверху, иначе снизу (пусть частично перекроет)
         var below = new CustomPopupPlacement(new Point(0, targetSize.Height), PopupPrimaryAxis.Horizontal);
         var above = new CustomPopupPlacement(new Point(0, -popupSize.Height), PopupPrimaryAxis.Horizontal);
 

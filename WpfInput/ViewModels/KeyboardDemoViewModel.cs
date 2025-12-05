@@ -34,30 +34,27 @@ public sealed class KeyboardDemoViewModel : BindableBase
         }
     }
 
-    public DelegateCommand<string?> PressKeyCommand { get; }
+public DelegateCommand<string?> PressKeyCommand { get; }
 
-    private void OnPressKey(string? key)
+private void OnPressKey(string? key)
+{
+    if (string.IsNullOrEmpty(key)) return;
+
+    switch (key)
     {
-        if (key is null || key == "CLEAR")
-        {
+        case "ENTER":
+            _keyboard.RequestEnter();
+            break;
+        case "ESC":
             _keyboard.Clear();
-            return;
-        }
-
-        if (key == "BACK")
-        {
+            _keyboard.RequestCloseKeyboard();
+            break;
+            case "BACK":
             _keyboard.Backspace();
-            return;
-        }
-
-        if (key == "PASTE")
-        {
-            _keyboard.PasteFromClipboard();
-            return;
-        }
-
-        // В numeric grid я оставил "⌫" и "Clear" как CommandParameter пустой/Null —
-        // просто не используем это там, либо при желании зададим нормальные параметры.
-        _keyboard.SendText(key);
+            break;
+        default:
+            _keyboard.SendText(key);
+            break;
     }
+}
 }

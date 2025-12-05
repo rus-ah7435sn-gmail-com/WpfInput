@@ -12,6 +12,9 @@ public interface IKeyboardInputService
 {
     bool IsNumericOnly { get; set; }
 
+    event EventHandler? EnterRequested;
+    event EventHandler? CloseKeyboardRequested;
+
     void AttachTargets(ITextInputTarget t1, ITextInputTarget t2, ITextInputTarget t3);
     void SetActiveTarget(ActiveTarget target);
 
@@ -19,6 +22,8 @@ public interface IKeyboardInputService
     void Backspace();
     void Delete();
     void Clear();
-
     void PasteFromClipboard();
+
+    void RequestEnter();
+    void RequestCloseKeyboard();
 }
