@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using KeyboardDemo.PrismUnity.Services;
 using KeyboardDemo.PrismUnity.ViewModels;
 
@@ -20,8 +21,13 @@ public partial class KeyboardDemoView : UserControl
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
+            var focused = Keyboard.FocusedElement;
+            if (IsUiControlElement(focused))
+                return;
+
             InputSink.Focus();
             Keyboard.Focus(InputSink);
+
         }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -93,6 +99,23 @@ public partial class KeyboardDemoView : UserControl
         }
     }
 
+    private bool IsUiControlElement(IInputElement? el)
+    {
+        if (el is null) return false;
+
+        DependencyObject? d = el as DependencyObject;
+
+        while (d != null)
+        {
+            if (d is CheckBox || d is ButtonBase || d is ComboBox || d is Slider || d is ToggleButton)
+                return true;
+
+            d = VisualTreeHelper.GetParent(d);
+        }
+
+        return false;
+    }
+
     private void OnGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         if (IsFocusInText1OrText2(out var tb))
@@ -104,7 +127,8 @@ public partial class KeyboardDemoView : UserControl
         {
             HideKeyboard();
             _keyboard.SetActiveTarget(ActiveTarget.Text3);
-            FocusSink();
+            if (!IsUiControlElement(e.NewFocus))
+                FocusSink();
         }
     }
 
