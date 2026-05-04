@@ -1,3 +1,5 @@
+using KeyboardDemo.PrismUnity.Services;
+using KeyboardDemo.PrismUnity.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
@@ -9,7 +11,11 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        Services = new ServiceCollection().BuildServiceProvider();
+        Services = new ServiceCollection()
+            .AddSingleton<IKeyboardInputService, KeyboardInputService>()
+            .AddSingleton<KeyboardDemoViewModel>()
+            .BuildServiceProvider();
+
         new MainWindow().Activate();
     }
 }

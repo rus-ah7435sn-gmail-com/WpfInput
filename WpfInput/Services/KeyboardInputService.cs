@@ -1,5 +1,5 @@
 using System.Globalization;
-using System.Windows;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace KeyboardDemo.PrismUnity.Services;
 
@@ -13,19 +13,14 @@ public sealed class KeyboardInputService : IKeyboardInputService
     public bool IsNumericOnly { get; set; } = true;
 
     public event EventHandler? EnterRequested;
-    public void RequestEnter()
-        => EnterRequested?.Invoke(this, EventArgs.Empty);
+    public void RequestEnter() => EnterRequested?.Invoke(this, EventArgs.Empty);
 
     public event EventHandler? CloseKeyboardRequested;
-    public void RequestCloseKeyboard()
-        => CloseKeyboardRequested?.Invoke(this, EventArgs.Empty);
-
+    public void RequestCloseKeyboard() => CloseKeyboardRequested?.Invoke(this, EventArgs.Empty);
 
     public void AttachTargets(ITextInputTarget t1, ITextInputTarget t2, ITextInputTarget t3)
     {
-        _t1 = t1;
-        _t2 = t2;
-        _t3 = t3;
+        _t1 = t1; _t2 = t2; _t3 = t3;
     }
 
     public void SetActiveTarget(ActiveTarget target) => _active = target;
@@ -39,18 +34,18 @@ public sealed class KeyboardInputService : IKeyboardInputService
             : text;
 
         if (string.IsNullOrEmpty(filtered)) return;
-
         GetTarget()?.InsertText(filtered);
     }
 
     public void Backspace() => GetTarget()?.Backspace();
-    public void Delete() => GetTarget()?.Delete();
-    public void Clear() => GetTarget()?.Clear();
+    public void Delete()    => GetTarget()?.Delete();
+    public void Clear()     => GetTarget()?.Clear();
 
-    public void PasteFromClipboard()
+    public async Task PasteFromClipboardAsync()
     {
-        if (!Clipboard.ContainsText()) return;
-        var text = Clipboard.GetText();
+        var dataView = Clipboard.GetContent();
+        if (!dataView.Contains(StandardDataFormats.Text)) return;
+        var text = await dataView.GetTextAsync();
         SendText(text);
     }
 
@@ -59,7 +54,7 @@ public sealed class KeyboardInputService : IKeyboardInputService
         ActiveTarget.Text1 => _t1,
         ActiveTarget.Text2 => _t2,
         ActiveTarget.Text3 => _t3,
-        _ => _t3
+        _                  => _t3
     };
 
     private static string FilterNumeric(string text)
@@ -67,14 +62,9 @@ public sealed class KeyboardInputService : IKeyboardInputService
         var dec = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
         var result = new char[text.Length];
         var n = 0;
-
-        for (int i = 0; i < text.Length; i++)
-        {
-            var c = text[i];
+        foreach (var c in text)
             if (char.IsDigit(c) || c == '+' || c == '-' || c == ' ' || c == '.' || c == ',' || dec.Contains(c))
                 result[n++] = c;
-        }
-
         return n == 0 ? string.Empty : new string(result, 0, n);
     }
 }

@@ -1,12 +1,6 @@
 namespace KeyboardDemo.PrismUnity.Services;
 
-public enum ActiveTarget
-{
-    None,
-    Text1,
-    Text2,
-    Text3
-}
+public enum ActiveTarget { None, Text1, Text2, Text3 }
 
 public interface IKeyboardInputService
 {
@@ -22,7 +16,7 @@ public interface IKeyboardInputService
     void Backspace();
     void Delete();
     void Clear();
-    void PasteFromClipboard();
+    Task PasteFromClipboardAsync();
 
     void RequestEnter();
     void RequestCloseKeyboard();

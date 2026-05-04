@@ -19,14 +19,6 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
   </ItemGroup>
 
-  <!-- WPF-specific files — excluded until migrated to WinUI 3 -->
-  <ItemGroup>
-    <Compile Remove="Services\KeyboardInputService.cs" />
-    <Compile Remove="Services\TextBoxInputTarget.cs" />
-    <Page Remove="Views\KeyboardDemoView.xaml" />
-    <Compile Remove="Views\KeyboardDemoView.xaml.cs" />
-  </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Services\" />
   </ItemGroup>

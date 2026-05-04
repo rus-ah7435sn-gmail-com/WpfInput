@@ -1,13 +1,15 @@
-using System;
-using System.ComponentModel;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Media;
 using KeyboardDemo.PrismUnity.Services;
 using KeyboardDemo.PrismUnity.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Input;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
+using Windows.System;
+using Windows.UI.Core;
 
 namespace KeyboardDemo.PrismUnity.Views;
 
@@ -20,64 +22,46 @@ public partial class KeyboardDemoView : UserControl
 
     private void FocusSink()
     {
-        Dispatcher.BeginInvoke(new Action(() =>
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
-            var focused = Keyboard.FocusedElement;
-            if (IsUiControlElement(focused))
-                return;
-
-            InputSink.Focus();
-            Keyboard.Focus(InputSink);
-
-        }), System.Windows.Threading.DispatcherPriority.Background);
+            if (XamlRoot is null) return;
+            var focused = FocusManager.GetFocusedElement(XamlRoot);
+            if (IsUiControlElement(focused)) return;
+            InputSink.Focus(FocusState.Programmatic);
+        });
     }
 
-    public KeyboardDemoView()
-    : this(ResolveKeyboardService())
-    {
-    }
+    public KeyboardDemoView() : this(App.Services.GetRequiredService<IKeyboardInputService>()) { }
 
     public KeyboardDemoView(IKeyboardInputService keyboard)
     {
         InitializeComponent();
-
         _keyboard = keyboard;
+        DataContext = App.Services.GetRequiredService<KeyboardDemoViewModel>();
 
-        if (!DesignerProperties.GetIsInDesignMode(this))
-            DataContext = App.Services.GetRequiredService<KeyboardDemoViewModel>();
-
-        _keyboard.EnterRequested += (_, __) =>
+        _keyboard.EnterRequested += (_, _) =>
         {
-            if (IsFocusInText1OrText2(out var _))
+            if (IsFocusInText1OrText2(out _))
             {
-                Keyboard.ClearFocus();
                 HideKeyboard();
-
                 _keyboard.SetActiveTarget(ActiveTarget.Text3);
                 FocusSink();
             }
         };
 
-        _keyboard.CloseKeyboardRequested += (_, __) =>
+        _keyboard.CloseKeyboardRequested += (_, _) =>
         {
-            Keyboard.ClearFocus();
             HideKeyboard();
             _keyboard.SetActiveTarget(ActiveTarget.Text3);
         };
 
         Loaded += OnLoaded;
 
-        AddHandler(PreviewTextInputEvent, new TextCompositionEventHandler(OnPreviewTextInput), true);
-        AddHandler(PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown), true);
-        AddHandler(Keyboard.GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(OnGotKeyboardFocus), true);
-    }
-
-    private static IKeyboardInputService ResolveKeyboardService()
-    {
-        if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
-            return new KeyboardInputService();
-
-        return App.Services.GetRequiredService<IKeyboardInputService>();
+        AddHandler(UIElement.CharacterReceivedEvent,
+            new TypedEventHandler<UIElement, CharacterReceivedRoutedEventArgs>(OnCharacterReceived), true);
+        AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(OnKeyDown), true);
+        // GotFocusEvent не экспонируется как статическое поле в WinUI 3 — подписываемся напрямую
+        GotFocus += OnGotFocus;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -90,8 +74,6 @@ public partial class KeyboardDemoView : UserControl
         _keyboard.SetActiveTarget(ActiveTarget.Text3);
         FocusSink();
 
-        KeyboardPopup.CustomPopupPlacementCallback = PlaceKeyboardPopup;
-
         if (DataContext is KeyboardDemoViewModel vm)
         {
             _keyboard.IsNumericOnly = vm.IsNumericOnly;
@@ -103,69 +85,72 @@ public partial class KeyboardDemoView : UserControl
         }
     }
 
-    private bool IsUiControlElement(IInputElement? el)
+    private static bool IsUiControlElement(object? el)
     {
-        if (el is null) return false;
-
-        DependencyObject? d = el as DependencyObject;
-
-        while (d != null)
+        if (el is not DependencyObject d) return false;
+        DependencyObject? current = d;
+        while (current is not null)
         {
-            if (d is CheckBox || d is ButtonBase || d is ComboBox || d is Slider || d is ToggleButton)
+            if (current is CheckBox or ButtonBase or ComboBox or Slider or ToggleButton)
                 return true;
-
-            d = VisualTreeHelper.GetParent(d);
+            current = VisualTreeHelper.GetParent(current);
         }
-
         return false;
     }
 
-    private void OnGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    private void OnGotFocus(object sender, RoutedEventArgs e)
     {
-        if (IsFocusInText1OrText2(out var tb))
+        var source = e.OriginalSource;
+
+        if (IsSameOrChild(source, Text1Box))
         {
-            ShowKeyboard(tb);
-            _keyboard.SetActiveTarget(tb == Text1Box ? ActiveTarget.Text1 : ActiveTarget.Text2);
+            ShowKeyboard(Text1Box);
+            _keyboard.SetActiveTarget(ActiveTarget.Text1);
+            return;
         }
-        else
+
+        if (IsSameOrChild(source, Text2Box))
         {
-            HideKeyboard();
-            _keyboard.SetActiveTarget(ActiveTarget.Text3);
-            if (!IsUiControlElement(e.NewFocus))
-                FocusSink();
+            ShowKeyboard(Text2Box);
+            _keyboard.SetActiveTarget(ActiveTarget.Text2);
+            return;
         }
+
+        HideKeyboard();
+        _keyboard.SetActiveTarget(ActiveTarget.Text3);
+        if (!IsUiControlElement(source))
+            FocusSink();
     }
 
-    private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+    private void OnCharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs e)
     {
         if (IsFocusInText1OrText2(out var tb))
         {
             _keyboard.SetActiveTarget(tb == Text1Box ? ActiveTarget.Text1 : ActiveTarget.Text2);
-            _keyboard.SendText(e.Text);
+            _keyboard.SendText(e.Character.ToString());
             e.Handled = true;
             return;
         }
 
         _keyboard.SetActiveTarget(ActiveTarget.Text3);
-        _keyboard.SendText(e.Text);
+        _keyboard.SendText(e.Character.ToString());
         e.Handled = true;
     }
 
-    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    private async void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && e.Key == Key.V)
-        {
-            if (IsFocusInText1OrText2(out var tb))
-                _keyboard.SetActiveTarget(tb == Text1Box ? ActiveTarget.Text1 : ActiveTarget.Text2);
-            else
-                _keyboard.SetActiveTarget(ActiveTarget.Text3);
+        var ctrlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control)
+                           .HasFlag(CoreVirtualKeyStates.Down);
 
-            _keyboard.PasteFromClipboard();
+        if (ctrlDown && e.Key == VirtualKey.V)
+        {
+            RouteTargetByFocus();
+            await _keyboard.PasteFromClipboardAsync();
             e.Handled = true;
             return;
         }
 
-        if (e.Key == Key.Back)
+        if (e.Key == VirtualKey.Back)
         {
             RouteTargetByFocus();
             _keyboard.Backspace();
@@ -173,7 +158,7 @@ public partial class KeyboardDemoView : UserControl
             return;
         }
 
-        if (e.Key == Key.Delete)
+        if (e.Key == VirtualKey.Delete)
         {
             RouteTargetByFocus();
             _keyboard.Delete();
@@ -181,7 +166,7 @@ public partial class KeyboardDemoView : UserControl
             return;
         }
 
-        if (e.Key == Key.Escape)
+        if (e.Key == VirtualKey.Escape)
         {
             RouteTargetByFocus();
             _keyboard.Clear();
@@ -190,16 +175,11 @@ public partial class KeyboardDemoView : UserControl
             return;
         }
 
-        if (e.Key == Key.Enter || e.Key == Key.Tab)
+        if (e.Key == VirtualKey.Enter || e.Key == VirtualKey.Tab)
         {
             if (IsFocusInText1OrText2(out _))
-            {
-                Keyboard.ClearFocus();
                 HideKeyboard();
-            }
-
             e.Handled = true;
-            return;
         }
     }
 
@@ -214,21 +194,30 @@ public partial class KeyboardDemoView : UserControl
     private bool IsFocusInText1OrText2(out TextBox target)
     {
         target = null!;
+        if (XamlRoot is null) return false;
+        var focused = FocusManager.GetFocusedElement(XamlRoot);
+        if (IsSameOrChild(focused, Text1Box)) { target = Text1Box; return true; }
+        if (IsSameOrChild(focused, Text2Box)) { target = Text2Box; return true; }
+        return false;
+    }
 
-        if (Text1Box.IsKeyboardFocusWithin) { target = Text1Box; return true; }
-        if (Text2Box.IsKeyboardFocusWithin) { target = Text2Box; return true; }
-
+    private static bool IsSameOrChild(object? element, FrameworkElement parent)
+    {
+        if (element is not DependencyObject d) return false;
+        DependencyObject? current = d;
+        while (current is not null)
+        {
+            if (current == parent) return true;
+            current = VisualTreeHelper.GetParent(current);
+        }
         return false;
     }
 
     private void ShowKeyboard(TextBox placementTarget)
     {
-        KeyboardPopup.PlacementTarget = placementTarget;
+        PositionPopup(placementTarget);
         if (!KeyboardPopup.IsOpen)
             KeyboardPopup.IsOpen = true;
-
-        KeyboardPopup.HorizontalOffset += 0.1;
-        KeyboardPopup.HorizontalOffset -= 0.1;
     }
 
     private void HideKeyboard()
@@ -239,26 +228,22 @@ public partial class KeyboardDemoView : UserControl
         FocusSink();
     }
 
-    private CustomPopupPlacement[] PlaceKeyboardPopup(Size popupSize, Size targetSize, Point offset)
+    private void PositionPopup(TextBox target)
     {
-        var target = KeyboardPopup.PlacementTarget as FrameworkElement;
-        if (target == null)
-            return new[] { new CustomPopupPlacement(new Point(0, targetSize.Height), PopupPrimaryAxis.Horizontal) };
+        const double popupHeight = 320;
+        const double gap = 4;
 
-        var topLeft = target.PointToScreen(new Point(0, 0));
-        var work = SystemParameters.WorkArea;
+        var transform = target.TransformToVisual(ContentGrid);
+        var pos = transform.TransformPoint(new Point(0, 0));
 
-        var spaceBelow = (work.Bottom) - (topLeft.Y + targetSize.Height);
-        var fitsBelow = spaceBelow >= popupSize.Height;
+        double x = pos.X;
+        double y = pos.Y + target.ActualHeight + gap;
 
-        var spaceAbove = (topLeft.Y) - (work.Top);
-        var fitsAbove = spaceAbove >= popupSize.Height;
+        // Если снизу нет места — показать сверху
+        if (y + popupHeight > ContentGrid.ActualHeight && pos.Y - popupHeight - gap >= 0)
+            y = pos.Y - popupHeight - gap;
 
-        var below = new CustomPopupPlacement(new Point(0, targetSize.Height), PopupPrimaryAxis.Horizontal);
-        var above = new CustomPopupPlacement(new Point(0, -popupSize.Height), PopupPrimaryAxis.Horizontal);
-
-        if (fitsBelow) return new[] { below };
-        if (fitsAbove) return new[] { above };
-        return new[] { below };
+        KeyboardPopup.HorizontalOffset = x;
+        KeyboardPopup.VerticalOffset   = y;
     }
 }
