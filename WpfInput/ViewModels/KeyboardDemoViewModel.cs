@@ -1,10 +1,10 @@
-using Prism.Commands;
-using Prism.Mvvm;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KeyboardDemo.PrismUnity.Services;
 
 namespace KeyboardDemo.PrismUnity.ViewModels;
 
-public sealed class KeyboardDemoViewModel : BindableBase
+public sealed class KeyboardDemoViewModel : ObservableObject
 {
     private readonly IKeyboardInputService _keyboard;
 
@@ -12,7 +12,7 @@ public sealed class KeyboardDemoViewModel : BindableBase
     {
         _keyboard = keyboard;
 
-        PressKeyCommand = new DelegateCommand<string?>(OnPressKey);
+        PressKeyCommand = new RelayCommand<string?>(OnPressKey);
     }
 
     private string _text1 = "";
@@ -34,27 +34,27 @@ public sealed class KeyboardDemoViewModel : BindableBase
         }
     }
 
-public DelegateCommand<string?> PressKeyCommand { get; }
+    public RelayCommand<string?> PressKeyCommand { get; }
 
-private void OnPressKey(string? key)
-{
-    if (string.IsNullOrEmpty(key)) return;
-
-    switch (key)
+    private void OnPressKey(string? key)
     {
-        case "ENTER":
-            _keyboard.RequestEnter();
-            break;
-        case "ESC":
-            _keyboard.Clear();
-            _keyboard.RequestCloseKeyboard();
-            break;
+        if (string.IsNullOrEmpty(key)) return;
+
+        switch (key)
+        {
+            case "ENTER":
+                _keyboard.RequestEnter();
+                break;
+            case "ESC":
+                _keyboard.Clear();
+                _keyboard.RequestCloseKeyboard();
+                break;
             case "BACK":
-            _keyboard.Backspace();
-            break;
-        default:
-            _keyboard.SendText(key);
-            break;
+                _keyboard.Backspace();
+                break;
+            default:
+                _keyboard.SendText(key);
+                break;
+        }
     }
-}
 }

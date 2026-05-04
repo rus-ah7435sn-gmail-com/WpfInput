@@ -1,17 +1,23 @@
-﻿using System.Windows;
+using System.Windows;
 using KeyboardDemo.PrismUnity.Services;
-using Prism.Ioc;
-using Prism.Unity;
+using KeyboardDemo.PrismUnity.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyboardDemo.PrismUnity;
 
-public partial class App : PrismApplication
+public partial class App : Application
 {
-    protected override Window CreateShell()
-        => Container.Resolve<MainWindow>();
+    public static IServiceProvider Services { get; private set; } = null!;
 
-    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    protected override void OnStartup(StartupEventArgs e)
     {
-        containerRegistry.RegisterSingleton<IKeyboardInputService, KeyboardInputService>();
+        base.OnStartup(e);
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IKeyboardInputService, KeyboardInputService>();
+        services.AddTransient<KeyboardDemoViewModel>();
+        Services = services.BuildServiceProvider();
+
+        new MainWindow().Show();
     }
 }

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using KeyboardDemo.PrismUnity.Services;
 using KeyboardDemo.PrismUnity.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyboardDemo.PrismUnity.Views;
 
@@ -42,6 +43,9 @@ public partial class KeyboardDemoView : UserControl
 
         _keyboard = keyboard;
 
+        if (!DesignerProperties.GetIsInDesignMode(this))
+            DataContext = App.Services.GetRequiredService<KeyboardDemoViewModel>();
+
         _keyboard.EnterRequested += (_, __) =>
         {
             if (IsFocusInText1OrText2(out var _))
@@ -73,7 +77,7 @@ public partial class KeyboardDemoView : UserControl
         if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
             return new KeyboardInputService();
 
-        return ContainerLocator.Container.Resolve<IKeyboardInputService>();
+        return App.Services.GetRequiredService<IKeyboardInputService>();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
