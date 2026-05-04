@@ -1,18 +1,13 @@
-﻿using System.Windows;
-using System.Windows.Input;
+using Microsoft.UI.Xaml;
+using Windows.Graphics;
 
 namespace KeyboardDemo.PrismUnity;
 
-public partial class MainWindow : Window
+public sealed partial class MainWindow : Window
 {
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += (_, __) =>
-        {
-            Activate();
-            Focus();
-            Keyboard.ClearFocus();
-        };
+        AppWindow.Resize(new SizeInt32(900, 600));
     }
 }

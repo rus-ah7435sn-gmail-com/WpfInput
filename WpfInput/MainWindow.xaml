@@ -1,7 +1,7 @@
-﻿<Window x:Class="KeyboardDemo.PrismUnity.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:views="clr-namespace:KeyboardDemo.PrismUnity.Views"
-        Title="Keyboard Demo" Width="900" Height="600">
-    <views:KeyboardDemoView/>
+<Window
+    x:Class="KeyboardDemo.PrismUnity.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Keyboard Demo">
+    <Grid/>
 </Window>
